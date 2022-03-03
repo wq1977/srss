@@ -86,8 +86,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   static const String htmlHeader = '''
+<!DOCTYPE html>
 <html>
-<header>
+<head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 $css
@@ -104,6 +105,10 @@ window.appendItem = function (item) {
                 "<div>" + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
   document.body.appendChild(d)              
 }
+
+// setInterval(()=>{
+//   // Print.postMessage(`\${window.pageYOffset} || \${document.documentElement.scrollTop} || \${document.body.scrollTop}`);
+// }, 1000)
 
 window.addEventListener('scroll', function() {
   if (window.scrollendWatchTimer) {
@@ -126,7 +131,7 @@ window.addEventListener('scroll', function() {
   }, 1000)
 });
 </script>
-</header>
+</head>
 <body>
 ''';
   static const String htmlEnd = '''
@@ -134,9 +139,7 @@ window.addEventListener('scroll', function() {
 </html>
 ''';
   getHTMLContent() {
-    contentBase64 =
-        base64Encode(const Utf8Encoder().convert(htmlHeader + htmlEnd));
-    return 'data:text/html;base64,$contentBase64';
+    return htmlHeader + htmlEnd;
   }
 
   refreshRSS(String url) async {
@@ -236,8 +239,10 @@ window.addEventListener('scroll', function() {
         ],
       ),
       body: WebView(
-        initialUrl: getHTMLContent(),
-        onWebViewCreated: (WebViewController webViewController) {
+        initialUrl: 'about:blank', //getHTMLContent(),
+        debuggingEnabled: false, //turn on to debug from chrome
+        onWebViewCreated: (WebViewController webViewController) async {
+          await webViewController.loadHtmlString(getHTMLContent());
           _controller.complete(webViewController);
         },
         javascriptMode: JavascriptMode.unrestricted,
