@@ -6,9 +6,9 @@ import 'package:prompt_dialog/prompt_dialog.dart';
 import 'package:srss/const.dart';
 import 'package:srss/model.dart';
 import 'package:http/http.dart' as http;
-import 'package:vibration/vibration.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_vibrate/flutter_vibrate.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +54,17 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  appendItem(PostItem item) {
+  String item2json(PostItem item) {
+    return jsonEncode({
+      "title": item.title,
+      "description": item.description,
+      "link": item.link,
+      "pubDate": item.pubDate.millisecondsSinceEpoch,
+      "rssTitle": item.rssTitle
+    });
+  }
+
+  appendItem(PostItem item) async {
     String key = '${item.pubDate.millisecondsSinceEpoch}';
     if (runtimeState[key] == null &&
         states[key] != PostState.psReaded.index &&
@@ -66,6 +76,10 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         runtimeState[key] = PostState.values[states[key]!];
       }
+      var controller = await _controller.future;
+      String script = "appendItem(${item2json(item)})";
+      // print(script);
+      controller.runJavascript(script);
     }
     // items.sort((a, b) =>
     //     b.pubDate.millisecondsSinceEpoch - a.pubDate.millisecondsSinceEpoch);
@@ -79,22 +93,44 @@ class _MyHomePageState extends State<MyHomePage> {
 $css
 </style>
 <script>
+window.appendItem = function (item) {
+  var d = document.createElement("div");
+  d.className = 'srss_post_item'
+  d.setAttribute('data-link', item.pubDate)
+  d.setAttribute('data-title', item.title)
+  d.onclick = ()=>{router.postMessage(item.link);}
+  d.innerHTML = "<h1>"+item.title + "</h1>" +
+                "<div>" + item.rssTitle + "</div>" +
+                "<div>" + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
+  document.body.appendChild(d)              
+}
+
+setInterval(()=>{
+  const nodes = document.querySelectorAll('.srss_post_item')
+  if (nodes.length > 0) {
+    Print.postMessage(">>>>>>> " + nodes[0].getBoundingClientRect().top +" " + window.screen.height)
+  }
+}, 1000)
+
 window.addEventListener('scroll', function() {
+  Print.postMessage('scrolling ...')
   if (window.scrollendWatchTimer) {
     clearTimeout(window.scrollendWatchTimer)
   }
   window.scrollendWatchTimer = setTimeout(()=>{
     window.scrollendWatchTimer=null
     const nodes = document.querySelectorAll('.srss_post_item')
+    Print.postMessage(nodes.length)
+    const readed = []
     for (var i=0;i<nodes.length;i++) {
       const node = nodes[i]
-      const key = node.getAttribute('data-key')
+      const link = node.getAttribute('data-link')
       const rect = node.getBoundingClientRect()
       if (rect.bottom < 0) {
-        hidden.postMessage(key)
-        break //only hidden one item once
+        readed.push(link)
       }
     }
+    hidden.postMessage(readed.join(","))
   }, 1000)
 });
 </script>
@@ -105,19 +141,10 @@ window.addEventListener('scroll', function() {
 </body>
 </html>
 ''';
-  updateHTMLContent() async {
-    contentBase64 = base64Encode(const Utf8Encoder().convert(htmlHeader +
-        items
-            .map((item) =>
-                '''<div class="srss_post_item" data-key="${item.pubDate.millisecondsSinceEpoch}" onclick="router.postMessage('${item.link}')">
-                <h1>${item.title}</h1>
-                <div>${item.rssTitle}</div>
-                <div>${item.description.contains('<p>') ? item.description : '<p>${item.description}</p>'}</div>
-              </div>''')
-            .join('') +
-        htmlEnd));
-    var controller = await _controller.future;
-    controller.loadUrl('data:text/html;base64,$contentBase64');
+  getHTMLContent() {
+    contentBase64 =
+        base64Encode(const Utf8Encoder().convert(htmlHeader + htmlEnd));
+    return 'data:text/html;base64,$contentBase64';
   }
 
   refreshRSS(String url) async {
@@ -145,7 +172,6 @@ window.addEventListener('scroll', function() {
                   pubDate: e.pubDate!);
               appendItem(postitem);
             }
-            updateHTMLContent();
             if (mounted) {
               setState(() {});
             }
@@ -162,7 +188,6 @@ window.addEventListener('scroll', function() {
                   pubDate: e.updated!);
               appendItem(postitem);
             }
-            updateHTMLContent();
             if (mounted) {
               setState(() {});
             }
@@ -219,7 +244,7 @@ window.addEventListener('scroll', function() {
         ],
       ),
       body: WebView(
-        initialUrl: 'about:blank',
+        initialUrl: getHTMLContent(),
         onWebViewCreated: (WebViewController webViewController) {
           _controller.complete(webViewController);
         },
@@ -228,12 +253,21 @@ window.addEventListener('scroll', function() {
           JavascriptChannel(
               name: 'hidden',
               onMessageReceived: (JavascriptMessage message) async {
-                String key = message.message;
-                setItemState(
-                    DateTime.fromMillisecondsSinceEpoch(int.parse(key)),
-                    PostState.psReaded);
-                if (await Vibration.hasVibrator()) {
-                  Vibration.vibrate();
+                List<String> keys = message.message.split(",");
+                for (var key in keys) {
+                  if (states[key] == PostState.psNew.index) {
+                    setItemState(
+                        DateTime.fromMillisecondsSinceEpoch(int.parse(key)),
+                        PostState.psReaded);
+                    bool canVibrate = await Vibrate.canVibrate;
+                    if (canVibrate) {
+                      print('**** 可以震动');
+                      Vibrate.vibrate();
+                    } else {
+                      print('**** 不能震动');
+                    }
+                    break;
+                  }
                 }
               }),
           JavascriptChannel(
