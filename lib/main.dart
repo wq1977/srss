@@ -105,15 +105,7 @@ window.appendItem = function (item) {
   document.body.appendChild(d)              
 }
 
-setInterval(()=>{
-  const nodes = document.querySelectorAll('.srss_post_item')
-  if (nodes.length > 0) {
-    Print.postMessage(">>>>>>> " + nodes[0].getBoundingClientRect().top +" " + window.screen.height)
-  }
-}, 1000)
-
 window.addEventListener('scroll', function() {
-  Print.postMessage('scrolling ...')
   if (window.scrollendWatchTimer) {
     clearTimeout(window.scrollendWatchTimer)
   }
@@ -261,10 +253,7 @@ window.addEventListener('scroll', function() {
                         PostState.psReaded);
                     bool canVibrate = await Vibrate.canVibrate;
                     if (canVibrate) {
-                      print('**** 可以震动');
-                      Vibrate.vibrate();
-                    } else {
-                      print('**** 不能震动');
+                      Vibrate.feedback(FeedbackType.light);
                     }
                     break;
                   }
