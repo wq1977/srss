@@ -6,6 +6,7 @@ import 'package:prompt_dialog/prompt_dialog.dart';
 import 'package:srss/const.dart';
 import 'package:srss/model.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
@@ -42,8 +43,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  List<PostItem> items = [];
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Map<String, PostState> runtimeState = {};
   List<String> loading = [];
   String contentBase64 = '';
@@ -51,6 +51,17 @@ class _MyHomePageState extends State<MyHomePage> {
     String? rss = await prompt(context, title: const Text('输入RSS源url'));
     if (rss != null) {
       await refreshRSS(rss);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      String script = "clearAll()";
+      var controller = await _controller.future;
+      await controller.runJavascript(script);
+      runtimeState = {};
+      loadRss();
     }
   }
 
@@ -69,7 +80,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if (runtimeState[key] == null &&
         states[key] != PostState.psReaded.index &&
         states[key] != PostState.psFavorite.index) {
-      items.add(item);
       if (states[key] == null) {
         runtimeState[key] = PostState.psNew;
         setItemState(item.pubDate, PostState.psNew);
@@ -107,12 +117,16 @@ window.switchDarkMode = function(mode) {
   }
 }
 
+window.clearAll = function() {
+  document.body.innerHTML = '';
+}
+
 window.appendItem = function (item) {
   var d = document.createElement("div");
   d.className = 'srss_post_item'
   d.setAttribute('data-link', item.pubDate)
   d.setAttribute('data-title', item.title)
-  d.onclick = ()=>{router.postMessage(item.link);}
+  d.onclick = ()=>{router.postMessage(JSON.stringify(item));}
   d.innerHTML = "<h1>"+item.title + "</h1>" +
                 "<div>" + item.rssTitle + "</div>" +
                 "<div>" + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
@@ -225,7 +239,14 @@ window.addEventListener('scroll', function() {
   @override
   void initState() {
     loadRss();
+    WidgetsBinding.instance!.addObserver(this);
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
   }
 
   bool appbarHidden = false;
@@ -271,7 +292,7 @@ window.addEventListener('scroll', function() {
         bottom: true,
         child: WebView(
           initialUrl: 'about:blank', //getHTMLContent(),
-          debuggingEnabled: false, //turn on to debug from chrome
+          debuggingEnabled: true, //turn on to debug from chrome
           onWebViewCreated: (WebViewController webViewController) async {
             await webViewController.loadHtmlString(getHTMLContent());
             await Future.delayed(const Duration(milliseconds: 100));
@@ -323,16 +344,24 @@ window.addEventListener('scroll', function() {
                 }),
             JavascriptChannel(
                 name: 'router',
-                onMessageReceived: (JavascriptMessage url) {
+                onMessageReceived: (JavascriptMessage message) {
+                  var item = jsonDecode(message.message);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => Scaffold(
                         appBar: AppBar(
-                          title: const Text('Second Route'),
+                          title: Text(item['rssTitle']),
+                          actions: [
+                            IconButton(
+                                onPressed: () async {
+                                  await launch(item['link']);
+                                },
+                                icon: const Icon(Icons.open_in_browser))
+                          ],
                         ),
                         body: WebView(
-                          initialUrl: url.message,
+                          initialUrl: item['link'],
                           javascriptMode: JavascriptMode.unrestricted,
                         ),
                       ),
