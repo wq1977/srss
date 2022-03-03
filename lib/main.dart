@@ -141,6 +141,7 @@ window.addEventListener('scroll', function() {
       }
     }
     hidden.postMessage(readed.join(","))
+    scroll.postMessage(window.pageYOffset)
   }, 1000)
 });
 </script>
@@ -227,93 +228,119 @@ window.addEventListener('scroll', function() {
     super.initState();
   }
 
+  bool appbarHidden = false;
+
   final Completer<WebViewController> _controller =
       Completer<WebViewController>();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          ...loading.isNotEmpty
-              ? [
-                  const Center(
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                ]
-              : [],
-          IconButton(
-              onPressed: () async {
-                bool mode = await switchDarkMode();
-                var controller = await _controller.future;
-                controller.runJavascript('switchDarkMode($mode)');
-                setState(() {});
-              },
-              icon: Icon(darkMode
-                  ? Icons.dark_mode_outlined
-                  : Icons.light_mode_outlined)),
-          IconButton(onPressed: addAnRSS, icon: const Icon(Icons.add_card))
-        ],
-      ),
-      body: WebView(
-        initialUrl: 'about:blank', //getHTMLContent(),
-        debuggingEnabled: false, //turn on to debug from chrome
-        onWebViewCreated: (WebViewController webViewController) async {
-          await webViewController.loadHtmlString(getHTMLContent());
-          await Future.delayed(const Duration(milliseconds: 100));
-          await webViewController.runJavascript('switchDarkMode($darkMode)');
-          _controller.complete(webViewController);
-        },
-        javascriptMode: JavascriptMode.unrestricted,
-        javascriptChannels: {
-          JavascriptChannel(
-              name: 'hidden',
-              onMessageReceived: (JavascriptMessage message) async {
-                List<String> keys = message.message.split(",");
-                for (var key in keys) {
-                  if (states[key] == PostState.psNew.index) {
-                    setItemState(
-                        DateTime.fromMillisecondsSinceEpoch(int.parse(key)),
-                        PostState.psReaded);
-                    bool canVibrate = await Vibrate.canVibrate;
-                    if (canVibrate) {
-                      Vibrate.feedback(FeedbackType.light);
+      appBar: appbarHidden
+          ? null
+          : AppBar(
+              title: Text(widget.title),
+              actions: [
+                ...loading.isNotEmpty
+                    ? [
+                        const Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      ]
+                    : [],
+                IconButton(
+                    onPressed: () async {
+                      bool mode = await switchDarkMode();
+                      var controller = await _controller.future;
+                      controller.runJavascript('switchDarkMode($mode)');
+                      setState(() {});
+                    },
+                    icon: Icon(darkMode
+                        ? Icons.dark_mode_outlined
+                        : Icons.light_mode_outlined)),
+                IconButton(
+                    onPressed: addAnRSS, icon: const Icon(Icons.add_card))
+              ],
+            ),
+      body: SafeArea(
+        bottom: true,
+        child: WebView(
+          initialUrl: 'about:blank', //getHTMLContent(),
+          debuggingEnabled: false, //turn on to debug from chrome
+          onWebViewCreated: (WebViewController webViewController) async {
+            await webViewController.loadHtmlString(getHTMLContent());
+            await Future.delayed(const Duration(milliseconds: 100));
+            await webViewController.runJavascript('switchDarkMode($darkMode)');
+            _controller.complete(webViewController);
+          },
+          javascriptMode: JavascriptMode.unrestricted,
+          javascriptChannels: {
+            JavascriptChannel(
+                name: 'hidden',
+                onMessageReceived: (JavascriptMessage message) async {
+                  List<String> keys = message.message.split(",");
+                  for (var key in keys) {
+                    if (states[key] == PostState.psNew.index) {
+                      setItemState(
+                          DateTime.fromMillisecondsSinceEpoch(int.parse(key)),
+                          PostState.psReaded);
+                      bool canVibrate = await Vibrate.canVibrate;
+                      if (canVibrate) {
+                        Vibrate.feedback(FeedbackType.light);
+                      }
+                      break;
                     }
-                    break;
                   }
-                }
-              }),
-          JavascriptChannel(
-              name: 'Print',
-              onMessageReceived: (JavascriptMessage message) {
-                // ignore: avoid_print
-                print(message.message);
-              }),
-          JavascriptChannel(
-              name: 'router',
-              onMessageReceived: (JavascriptMessage url) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: const Text('Second Route'),
-                      ),
-                      body: WebView(
-                        initialUrl: url.message,
-                        javascriptMode: JavascriptMode.unrestricted,
+                }),
+            JavascriptChannel(
+                name: 'Print',
+                onMessageReceived: (JavascriptMessage message) {
+                  // ignore: avoid_print
+                  print(message.message);
+                }),
+            JavascriptChannel(
+                name: 'scroll',
+                onMessageReceived: (JavascriptMessage message) {
+                  var pageYoffset = double.parse(message.message);
+                  if (pageYoffset == 0 && appbarHidden) {
+                    setState(() {
+                      appbarHidden = false;
+                    });
+                  }
+                  if (pageYoffset > 0 && !appbarHidden) {
+                    setState(() {
+                      appbarHidden = true;
+                    });
+                  }
+
+                  // ignore: avoid_print
+                  print(message.message);
+                }),
+            JavascriptChannel(
+                name: 'router',
+                onMessageReceived: (JavascriptMessage url) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(
+                          title: const Text('Second Route'),
+                        ),
+                        body: WebView(
+                          initialUrl: url.message,
+                          javascriptMode: JavascriptMode.unrestricted,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              })
-        },
+                  );
+                })
+          },
+        ),
       ),
     );
   }
