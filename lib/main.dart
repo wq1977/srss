@@ -166,7 +166,7 @@ window.addEventListener('scroll', function() {
           }
         }
       } else {
-        throw Exception('Failed to load album');
+        throw Exception('http error:${response.statusCode}');
       }
     } catch (ex) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
