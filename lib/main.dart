@@ -169,8 +169,9 @@ window.addEventListener('scroll', function() {
         throw Exception('Failed to load album');
       }
     } catch (ex) {
-      // ignore: avoid_print
-      print('$url $ex');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('获取内容失败($url):$ex'),
+      ));
     }
     loading = false;
     if (mounted) {
