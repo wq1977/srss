@@ -42,7 +42,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<RssItem> items = [];
+  List<PostItem> items = [];
   Map<String, PostState> runtimeState = {};
   bool loading = false;
   String contentBase64 = '';
@@ -53,27 +53,20 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  mergeItems(RssFeed feed) {
-    for (var item in feed.items!) {
-      String fullLink = item.link!.startsWith('http')
-          ? item.link!
-          : '${feed.link}${item.link}';
-      if (runtimeState[fullLink] == null) {
-        items.add(RssItem(
-            title: item.title,
-            description: item.description,
-            link: fullLink,
-            pubDate: item.pubDate));
-        if (states[fullLink] == null) {
-          runtimeState[fullLink] = PostState.psNew;
-          setItemState(fullLink, PostState.psNew);
-        } else {
-          runtimeState[fullLink] = PostState.values[states[fullLink]!];
-        }
+  appendItem(PostItem item) {
+    if (runtimeState[item.link] == null &&
+        states[item.link] != PostState.psReaded.index &&
+        states[item.link] != PostState.psFavorite.index) {
+      items.add(item);
+      if (states[item.link] == null) {
+        runtimeState[item.link] = PostState.psNew;
+        setItemState(item.link, PostState.psNew);
+      } else {
+        runtimeState[item.link] = PostState.values[states[item.link]!];
       }
     }
-    items.sort((a, b) =>
-        b.pubDate!.millisecondsSinceEpoch - a.pubDate!.millisecondsSinceEpoch);
+    // items.sort((a, b) =>
+    //     b.pubDate.millisecondsSinceEpoch - a.pubDate.millisecondsSinceEpoch);
   }
 
   static const String htmlHeader = '''
@@ -83,6 +76,25 @@ class _MyHomePageState extends State<MyHomePage> {
 <style>
 $css
 </style>
+<script>
+window.addEventListener('scroll', function() {
+  if (window.scrollendWatchTimer) {
+    clearTimeout(window.scrollendWatchTimer)
+  }
+  window.scrollendWatchTimer = setTimeout(()=>{
+    window.scrollendWatchTimer=null
+    const nodes = document.querySelectorAll('.srss_post_item')
+    for (var i=0;i<nodes.length;i++) {
+      const node = nodes[i]
+      const link = node.getAttribute('data-link')
+      const rect = node.getBoundingClientRect()
+      if (rect.bottom < 0) {
+        hidden.postMessage(link)
+      }
+    }
+  }, 1000)
+});
+</script>
 </header>
 <body>
 ''';
@@ -93,9 +105,11 @@ $css
   updateHTMLContent() async {
     contentBase64 = base64Encode(const Utf8Encoder().convert(htmlHeader +
         items
-            .map((item) => '''<div onclick="router.postMessage('${item.link}')">
+            .map((item) =>
+                '''<div class="srss_post_item" data-link="${item.link}" onclick="router.postMessage('${item.link}')">
                 <h1>${item.title}</h1>
-                <div>${item.description!.contains('<p>') ? item.description : '<p>${item.description}</p>'}</div>
+                <div>${item.rssTitle}</div>
+                <div>${item.description.contains('<p>') ? item.description : '<p>${item.description}</p>'}</div>
               </div>''')
             .join('') +
         htmlEnd));
@@ -113,12 +127,42 @@ $css
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         addRSS(url);
-        var rssFeed = RssFeed.parse(utf8.decode(response.bodyBytes));
-        if (rssFeed.items != null) {
-          mergeItems(rssFeed);
-          updateHTMLContent();
-          if (mounted) {
-            setState(() {});
+        String xml = utf8.decode(response.bodyBytes);
+        try {
+          var rssFeed = RssFeed.parse(xml);
+          if (rssFeed.items != null) {
+            for (var e in rssFeed.items!) {
+              var postitem = PostItem(
+                  link: e.link!.startsWith('http')
+                      ? e.link!
+                      : '${rssFeed.link}${e.link}',
+                  title: e.title ?? '',
+                  rssTitle: rssFeed.title!,
+                  description: e.description ?? '',
+                  pubDate: e.pubDate!);
+              appendItem(postitem);
+            }
+            updateHTMLContent();
+            if (mounted) {
+              setState(() {});
+            }
+          }
+        } catch (ex) {
+          var atomFeed = AtomFeed.parse(xml);
+          if (atomFeed.items != null) {
+            for (var e in atomFeed.items!) {
+              var postitem = PostItem(
+                  link: e.links![0].href!,
+                  title: e.title ?? '',
+                  rssTitle: atomFeed.title!,
+                  description: e.summary ?? e.content ?? '',
+                  pubDate: e.updated!);
+              appendItem(postitem);
+            }
+            updateHTMLContent();
+            if (mounted) {
+              setState(() {});
+            }
           }
         }
       } else {
@@ -126,7 +170,7 @@ $css
       }
     } catch (ex) {
       // ignore: avoid_print
-      print(ex);
+      print('$url $ex');
     }
     loading = false;
     if (mounted) {
@@ -177,6 +221,18 @@ $css
         },
         javascriptMode: JavascriptMode.unrestricted,
         javascriptChannels: {
+          JavascriptChannel(
+              name: 'hidden',
+              onMessageReceived: (JavascriptMessage message) {
+                String link = message.message;
+                setItemState(link, PostState.psReaded);
+              }),
+          JavascriptChannel(
+              name: 'Print',
+              onMessageReceived: (JavascriptMessage message) {
+                // ignore: avoid_print
+                print(message.message);
+              }),
           JavascriptChannel(
               name: 'router',
               onMessageReceived: (JavascriptMessage url) {

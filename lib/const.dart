@@ -27,7 +27,6 @@ h4 {
 p{
   text-align:justify;
   line-height: 1.7;
-  color: rgba(156,163,175,1);
 }
 
 img {

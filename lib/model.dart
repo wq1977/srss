@@ -2,7 +2,25 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum PostState { psNew, psOld, psReaded, psFavorite, psBlocked }
+enum PostState {
+  psNew,
+  psReaded,
+  psFavorite,
+}
+
+class PostItem {
+  final String title;
+  final String description;
+  final String link;
+  final DateTime pubDate;
+  final String rssTitle;
+  const PostItem(
+      {required this.link,
+      required this.title,
+      required this.description,
+      required this.rssTitle,
+      required this.pubDate});
+}
 
 List<String> urls = [];
 Map<String, int> states = {};
