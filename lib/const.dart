@@ -1,6 +1,7 @@
 const String css = """
 html {
-  font-size:10pt;
+  font-size:12pt;
+  font-weight:400;
 }
 
 body{

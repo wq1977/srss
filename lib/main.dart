@@ -44,7 +44,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<PostItem> items = [];
   Map<String, PostState> runtimeState = {};
-  bool loading = false;
+  List<String> loading = [];
   String contentBase64 = '';
   addAnRSS() async {
     String? rss = await prompt(context, title: const Text('输入RSS源url'));
@@ -119,7 +119,7 @@ window.addEventListener('scroll', function() {
 
   refreshRSS(String url) async {
     url = url.trim();
-    loading = true;
+    loading.add(url);
     if (mounted) {
       setState(() {});
     }
@@ -173,7 +173,7 @@ window.addEventListener('scroll', function() {
         content: Text('获取内容失败($url):$ex'),
       ));
     }
-    loading = false;
+    loading.remove(url);
     if (mounted) {
       setState(() {});
     }
@@ -199,7 +199,7 @@ window.addEventListener('scroll', function() {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          ...loading
+          ...loading.isNotEmpty
               ? [
                   const Center(
                     child: SizedBox(
