@@ -6,6 +6,7 @@ import 'package:prompt_dialog/prompt_dialog.dart';
 import 'package:srss/const.dart';
 import 'package:srss/model.dart';
 import 'package:http/http.dart' as http;
+import 'package:vibration/vibration.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -54,15 +55,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   appendItem(PostItem item) {
-    if (runtimeState[item.link] == null &&
-        states[item.link] != PostState.psReaded.index &&
-        states[item.link] != PostState.psFavorite.index) {
+    String key = '${item.pubDate.millisecondsSinceEpoch}';
+    if (runtimeState[key] == null &&
+        states[key] != PostState.psReaded.index &&
+        states[key] != PostState.psFavorite.index) {
       items.add(item);
-      if (states[item.link] == null) {
-        runtimeState[item.link] = PostState.psNew;
-        setItemState(item.link, PostState.psNew);
+      if (states[key] == null) {
+        runtimeState[key] = PostState.psNew;
+        setItemState(item.pubDate, PostState.psNew);
       } else {
-        runtimeState[item.link] = PostState.values[states[item.link]!];
+        runtimeState[key] = PostState.values[states[key]!];
       }
     }
     // items.sort((a, b) =>
@@ -86,10 +88,11 @@ window.addEventListener('scroll', function() {
     const nodes = document.querySelectorAll('.srss_post_item')
     for (var i=0;i<nodes.length;i++) {
       const node = nodes[i]
-      const link = node.getAttribute('data-link')
+      const key = node.getAttribute('data-key')
       const rect = node.getBoundingClientRect()
       if (rect.bottom < 0) {
-        hidden.postMessage(link)
+        hidden.postMessage(key)
+        break //only hidden one item once
       }
     }
   }, 1000)
@@ -106,7 +109,7 @@ window.addEventListener('scroll', function() {
     contentBase64 = base64Encode(const Utf8Encoder().convert(htmlHeader +
         items
             .map((item) =>
-                '''<div class="srss_post_item" data-link="${item.link}" onclick="router.postMessage('${item.link}')">
+                '''<div class="srss_post_item" data-key="${item.pubDate.millisecondsSinceEpoch}" onclick="router.postMessage('${item.link}')">
                 <h1>${item.title}</h1>
                 <div>${item.rssTitle}</div>
                 <div>${item.description.contains('<p>') ? item.description : '<p>${item.description}</p>'}</div>
@@ -224,9 +227,14 @@ window.addEventListener('scroll', function() {
         javascriptChannels: {
           JavascriptChannel(
               name: 'hidden',
-              onMessageReceived: (JavascriptMessage message) {
-                String link = message.message;
-                setItemState(link, PostState.psReaded);
+              onMessageReceived: (JavascriptMessage message) async {
+                String key = message.message;
+                setItemState(
+                    DateTime.fromMillisecondsSinceEpoch(int.parse(key)),
+                    PostState.psReaded);
+                if (await Vibration.hasVibrator()) {
+                  Vibration.vibrate();
+                }
               }),
           JavascriptChannel(
               name: 'Print',

@@ -39,9 +39,10 @@ addRSS(String url) async {
   }
 }
 
-setItemState(String url, PostState state) async {
-  if (states[url] != state.index) {
-    states[url] = state.index;
+setItemState(DateTime timestamp, PostState state) async {
+  String key = '${timestamp.millisecondsSinceEpoch}';
+  if (states[key] != state.index) {
+    states[key] = state.index;
     final prefs = await SharedPreferences.getInstance();
     prefs.setString('state', jsonEncode(states));
   }
