@@ -9,6 +9,10 @@ html, body {
     overflow-x: hidden;
 }
 
+.dark {
+  color: #d1d5db;
+}
+
 body{
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

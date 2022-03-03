@@ -94,6 +94,19 @@ class _MyHomePageState extends State<MyHomePage> {
 $css
 </style>
 <script>
+
+window.switchDarkMode = function(mode) {
+  if (mode) {
+    document.documentElement.classList.remove('light')
+    document.documentElement.classList.add('dark')
+    document.documentElement.style['color-scheme'] = 'dark'
+  } else {
+    document.documentElement.classList.remove('dark')
+    document.documentElement.classList.add('light')
+    document.documentElement.style['color-scheme'] = 'light'
+  }
+}
+
 window.appendItem = function (item) {
   var d = document.createElement("div");
   d.className = 'srss_post_item'
@@ -235,6 +248,16 @@ window.addEventListener('scroll', function() {
                   )
                 ]
               : [],
+          IconButton(
+              onPressed: () async {
+                bool mode = await switchDarkMode();
+                var controller = await _controller.future;
+                controller.runJavascript('switchDarkMode($mode)');
+                setState(() {});
+              },
+              icon: Icon(darkMode
+                  ? Icons.dark_mode_outlined
+                  : Icons.light_mode_outlined)),
           IconButton(onPressed: addAnRSS, icon: const Icon(Icons.add_card))
         ],
       ),
@@ -243,6 +266,8 @@ window.addEventListener('scroll', function() {
         debuggingEnabled: false, //turn on to debug from chrome
         onWebViewCreated: (WebViewController webViewController) async {
           await webViewController.loadHtmlString(getHTMLContent());
+          await Future.delayed(const Duration(milliseconds: 100));
+          await webViewController.runJavascript('switchDarkMode($darkMode)');
           _controller.complete(webViewController);
         },
         javascriptMode: JavascriptMode.unrestricted,

@@ -24,11 +24,20 @@ class PostItem {
 
 List<String> urls = [];
 Map<String, int> states = {};
+bool darkMode = false;
 
 Future<void> init() async {
   final prefs = await SharedPreferences.getInstance();
   urls = prefs.getStringList('rss') ?? [];
+  darkMode = prefs.getBool('darkmode') ?? false;
   states = Map<String, int>.from(jsonDecode(prefs.getString('state') ?? '{}'));
+}
+
+Future<bool> switchDarkMode() async {
+  darkMode = !darkMode;
+  final prefs = await SharedPreferences.getInstance();
+  prefs.setBool('darkmode', darkMode);
+  return darkMode;
 }
 
 addRSS(String url) async {
