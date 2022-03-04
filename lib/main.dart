@@ -117,6 +117,12 @@ window.switchDarkMode = function(mode) {
   }
 }
 
+window.done = function(){
+  document.body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;width:100vw;height:100vh;">目前这里空空如也</div>
+  `
+}
+
 window.clearAll = function() {
   document.body.innerHTML = '';
 }
@@ -150,7 +156,8 @@ window.addEventListener('scroll', function() {
       const node = nodes[i]
       const link = node.getAttribute('data-link')
       const rect = node.getBoundingClientRect()
-      if (rect.bottom < 0) {
+      if (rect.bottom < window.innerHeight) {
+        node.classList.add('readed')
         readed.push(link)
       }
     }
@@ -226,6 +233,10 @@ window.addEventListener('scroll', function() {
     loading.remove(url);
     if (mounted) {
       setState(() {});
+    }
+    if (loading.isEmpty) {
+      var controller = await _controller.future;
+      controller.runJavascript('done()');
     }
   }
 

@@ -22,6 +22,10 @@ h1 {
   font-size:1.3rem;
 }
 
+.readed h1 {
+  color: gray;
+}
+
 h2 {
   font-size:1.2rem;
 }
