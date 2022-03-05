@@ -47,6 +47,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Map<String, PostState> runtimeState = {};
   List<String> loading = [];
   String contentBase64 = '';
+  int itemCount = 0;
   addAnRSS() async {
     String? rss = await prompt(context, title: const Text('输入RSS源url'));
     if (rss != null) {
@@ -87,6 +88,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         runtimeState[key] = PostState.values[states[key]!];
       }
       var controller = await _controller.future;
+      itemCount++;
       String script = "appendItem(${item2json(item)})";
       // print(script);
       controller.runJavascript(script);
@@ -234,13 +236,14 @@ window.addEventListener('scroll', function() {
     if (mounted) {
       setState(() {});
     }
-    if (loading.isEmpty) {
+    if (loading.isEmpty && itemCount == 0) {
       var controller = await _controller.future;
       controller.runJavascript('done()');
     }
   }
 
   loadRss() {
+    itemCount = 0;
     for (var url in urls) {
       refreshRSS(url);
     }
