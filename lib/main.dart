@@ -130,13 +130,17 @@ window.clearAll = function() {
 }
 
 window.appendItem = function (item) {
+  function formatDate(date) {
+    const d = new Date(date)
+    return `\${d.getFullYear()}/\${d.getMonth()}/\${d.getDate()}`
+  }
   var d = document.createElement("div");
   d.className = 'srss_post_item'
   d.setAttribute('data-link', item.pubDate)
   d.setAttribute('data-title', item.title)
   d.onclick = ()=>{router.postMessage(JSON.stringify(item));}
   d.innerHTML = "<h1>"+item.title + "</h1>" +
-                "<div>" + item.rssTitle + "</div>" +
+                "<div>" + item.rssTitle + " " + formatDate(item.pubDate) + "</div>" +
                 "<div>" + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
   document.body.appendChild(d)              
 }
@@ -158,7 +162,7 @@ window.addEventListener('scroll', function() {
       const node = nodes[i]
       const link = node.getAttribute('data-link')
       const rect = node.getBoundingClientRect()
-      if (rect.bottom < window.innerHeight) {
+      if (rect.bottom < 0) {
         node.classList.add('readed')
         readed.push(link)
       }
@@ -337,9 +341,9 @@ window.addEventListener('scroll', function() {
                 }),
             JavascriptChannel(
                 name: 'router',
-                onMessageReceived: (JavascriptMessage message) {
+                onMessageReceived: (JavascriptMessage message) async {
                   var item = jsonDecode(message.message);
-                  Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => Scaffold(
@@ -360,6 +364,7 @@ window.addEventListener('scroll', function() {
                       ),
                     ),
                   );
+                  setItemState(item['pubDate'], PostState.psReaded);
                 })
           },
         ),
