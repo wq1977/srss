@@ -138,7 +138,7 @@ window.appendItem = function (item) {
   d.className = 'srss_post_item'
   d.setAttribute('data-link', item.pubDate)
   d.setAttribute('data-title', item.title)
-  d.onclick = ()=>{router.postMessage(JSON.stringify(item));}
+  d.onclick = (e)=>{ e.preventDefault(); router.postMessage(JSON.stringify(item));}
   d.innerHTML = "<h1>"+item.title + "</h1>" +
                 "<div>" + item.rssTitle + " " + formatDate(item.pubDate) + "</div>" +
                 "<div>" + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
