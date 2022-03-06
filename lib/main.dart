@@ -149,6 +149,13 @@ window.appendItem = function (item) {
 //   // Print.postMessage(`\${window.pageYOffset} || \${document.documentElement.scrollTop} || \${document.body.scrollTop}`);
 // }, 1000)
 
+window.markAsReaded = function(item) {
+  const node = document.querySelector(`[data-link="\${item}"]`)
+  if (node) {
+        node.classList.add('readed')
+  }
+}
+
 window.addEventListener('scroll', function() {
   if (window.scrollendWatchTimer) {
     clearTimeout(window.scrollendWatchTimer)
@@ -163,7 +170,7 @@ window.addEventListener('scroll', function() {
       const link = node.getAttribute('data-link')
       const rect = node.getBoundingClientRect()
       if (rect.bottom < 0) {
-        node.classList.add('readed')
+        markAsReaded(link)
         readed.push(link)
       }
     }
@@ -364,7 +371,17 @@ window.addEventListener('scroll', function() {
                       ),
                     ),
                   );
-                  setItemState(item['pubDate'], PostState.psReaded);
+                  setItemState(
+                      DateTime.fromMillisecondsSinceEpoch(item['pubDate']),
+                      PostState.psReaded);
+                  var controller = await _controller.future;
+                  await controller
+                      .runJavascript('markAsReaded(${item["pubDate"]})');
+
+                  bool canVibrate = await Vibrate.canVibrate;
+                  if (canVibrate) {
+                    Vibrate.feedback(FeedbackType.light);
+                  }
                 })
           },
         ),
