@@ -212,7 +212,7 @@ window.addEventListener('scroll', function() {
                   rssTitle: rssFeed.title!,
                   description: e.description ?? '',
                   pubDate: e.pubDate!);
-              appendItem(postitem);
+              await appendItem(postitem);
             }
             if (mounted) {
               setState(() {});
@@ -247,7 +247,7 @@ window.addEventListener('scroll', function() {
     if (mounted) {
       setState(() {});
     }
-    if (loading.isEmpty && itemCount == 0) {
+    if (loading.isEmpty && (itemCount == 0)) {
       var controller = await _controller.future;
       controller.runJavascript('done()');
     }
