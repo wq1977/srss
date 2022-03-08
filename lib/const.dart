@@ -43,6 +43,19 @@ p{
   line-height: 1.7;
 }
 
+.description{
+  margin-bottom: 0.5em;
+    --tw-text-opacity: 1;
+    color: rgba(156,163,175,var(--tw-text-opacity));
+}
+
+.subtitle{
+  font-size: .875rem;
+    line-height: 1.25rem;
+    --tw-text-opacity: 1;
+    color: rgba(209,213,219,var(--tw-text-opacity));
+}
+
 img {
   width:100%;
   height:auto;

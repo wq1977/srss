@@ -132,7 +132,7 @@ window.clearAll = function() {
 window.appendItem = function (item) {
   function formatDate(date) {
     const d = new Date(date)
-    return `\${d.getFullYear()}/\${d.getMonth()}/\${d.getDate()}`
+    return `\${d.getFullYear()}/\${d.getMonth()+1}/\${d.getDate()}`
   }
   var d = document.createElement("div");
   d.className = 'srss_post_item'
@@ -140,8 +140,8 @@ window.appendItem = function (item) {
   d.setAttribute('data-title', item.title)
   d.onclick = (e)=>{ e.preventDefault(); router.postMessage(JSON.stringify(item));}
   d.innerHTML = "<h1>"+item.title + "</h1>" +
-                "<div>" + item.rssTitle + " " + formatDate(item.pubDate) + "</div>" +
-                "<div>" + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
+                '<div class="subtitle">' + item.rssTitle + " " + formatDate(item.pubDate) + "</div>" +
+                '<div class="description">' + (item.description.indexOf('<p>') >= 0 ? item.description : ('<p>' + item.description + '</p>')) + "</div>";
   document.body.appendChild(d)              
 }
 
