@@ -6,6 +6,7 @@ import 'package:prompt_dialog/prompt_dialog.dart';
 import 'package:srss/const.dart';
 import 'package:srss/model.dart';
 import 'package:http/http.dart' as http;
+import 'package:srss/rsspage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blueGrey,
       ),
+      routes: {RSSPage.routeName: (context) => const RSSPage()},
       home: const MyHomePage(title: '一个简单的RSS阅读器'),
     );
   }
@@ -203,6 +205,11 @@ window.addEventListener('scroll', function() {
         try {
           var rssFeed = RssFeed.parse(xml);
           if (rssFeed.items != null) {
+            setException(
+                url,
+                DateTime.now().toIso8601String() +
+                    " fetch " +
+                    rssFeed.items!.length.toString());
             for (var e in rssFeed.items!) {
               var postitem = PostItem(
                   link: e.link!.startsWith('http')
@@ -217,21 +224,38 @@ window.addEventListener('scroll', function() {
             if (mounted) {
               setState(() {});
             }
+          } else {
+            throw Exception('no Feed items');
           }
         } catch (ex) {
-          var atomFeed = AtomFeed.parse(xml);
-          if (atomFeed.items != null) {
-            for (var e in atomFeed.items!) {
-              var postitem = PostItem(
-                  link: e.links![0].href!,
-                  title: e.title ?? '',
-                  rssTitle: atomFeed.title!,
-                  description: e.summary ?? e.content ?? '',
-                  pubDate: e.updated!);
-              appendItem(postitem);
+          try {
+            var atomFeed = AtomFeed.parse(xml);
+            if (atomFeed.items != null) {
+              setException(
+                  url,
+                  DateTime.now().toIso8601String() +
+                      " fetch " +
+                      atomFeed.items!.length.toString());
+              for (var e in atomFeed.items!) {
+                var postitem = PostItem(
+                    link: e.links![0].href!,
+                    title: e.title ?? '',
+                    rssTitle: atomFeed.title!,
+                    description: e.summary ?? e.content ?? '',
+                    pubDate: e.updated!);
+                appendItem(postitem);
+              }
+              if (mounted) {
+                setState(() {});
+              }
+            } else {
+              throw Exception('No Feed!');
             }
-            if (mounted) {
-              setState(() {});
+          } catch (ex2) {
+            if (ex2 is ArgumentError) {
+              throw ex;
+            } else {
+              rethrow;
             }
           }
         }
@@ -239,9 +263,10 @@ window.addEventListener('scroll', function() {
         throw Exception('http error:${response.statusCode}');
       }
     } catch (ex) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('获取内容失败($url):$ex'),
-      ));
+      setException(url, ex.toString());
+      // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      //   content: Text('获取内容失败($url):$ex'),
+      // ));
     }
     loading.remove(url);
     if (mounted) {
@@ -307,6 +332,36 @@ window.addEventListener('scroll', function() {
           IconButton(onPressed: addAnRSS, icon: const Icon(Icons.add_card))
         ],
       ),
+      drawer: Drawer(
+          child: ListView(
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blueGrey,
+            ),
+            child: Text('一个简单的 RSS 阅读器'),
+          ),
+          ListTile(
+            title: const Text('编辑订阅'),
+            leading: const Icon(Icons.settings),
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                RSSPage.routeName,
+              ).then((_) {
+                loadRss();
+              });
+            },
+          ),
+          ListTile(
+            title: const Text('关于'),
+            leading: const Icon(Icons.person_add_alt_1_rounded),
+            onTap: () {
+              showAboutDialog(context: context);
+            },
+          )
+        ],
+      )),
       body: SafeArea(
         bottom: true,
         child: WebView(

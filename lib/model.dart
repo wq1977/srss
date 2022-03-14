@@ -24,6 +24,7 @@ class PostItem {
 
 List<String> urls = [];
 Map<String, int> states = {};
+Map<String, String> errors = {};
 bool darkMode = false;
 
 Future<void> init() async {
@@ -38,6 +39,14 @@ Future<bool> switchDarkMode() async {
   final prefs = await SharedPreferences.getInstance();
   prefs.setBool('darkmode', darkMode);
   return darkMode;
+}
+
+setException(String url, String error) {
+  errors[url] = error;
+}
+
+clearError(String url) {
+  errors.remove(url);
 }
 
 addRSS(String url) async {
