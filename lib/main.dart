@@ -264,9 +264,6 @@ window.addEventListener('scroll', function() {
       }
     } catch (ex) {
       setException(url, ex.toString());
-      // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      //   content: Text('获取内容失败($url):$ex'),
-      // ));
     }
     loading.remove(url);
     if (mounted) {

@@ -19,11 +19,17 @@ class _RSSPageState extends State<RSSPage> {
       ),
       body: ListView(
           children: urls
-              .map((e) => ListTile(
+              .map((e) => Dismissible(
+                  key: ValueKey(e),
+                  onDismissed: (d) async {
+                    await removeRSS(e);
+                    setState(() {});
+                  },
+                  child: ListTile(
                     title: Text(e),
                     subtitle:
                         errors[e] != null ? Text(errors[e]!) : const Text(''),
-                  ))
+                  )))
               .toList()),
     );
   }

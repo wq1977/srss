@@ -49,6 +49,12 @@ clearError(String url) {
   errors.remove(url);
 }
 
+removeRSS(String url) async {
+  urls.remove(url);
+  final prefs = await SharedPreferences.getInstance();
+  prefs.setStringList('rss', urls);
+}
+
 addRSS(String url) async {
   if (!urls.contains(url)) {
     urls.add(url);
