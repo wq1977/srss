@@ -342,6 +342,7 @@ window.addEventListener('scroll', function() {
             title: const Text('编辑订阅'),
             leading: const Icon(Icons.settings),
             onTap: () {
+              Navigator.pop(context);
               Navigator.pushNamed(
                 context,
                 RSSPage.routeName,
