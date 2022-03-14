@@ -51,6 +51,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   addAnRSS() async {
     String? rss = await prompt(context, title: const Text('输入RSS源url'));
     if (rss != null) {
+      String url = rss.trim();
+      addRSS(url);
       await refreshRSS(rss);
     }
   }
@@ -190,7 +192,6 @@ window.addEventListener('scroll', function() {
   }
 
   refreshRSS(String url) async {
-    url = url.trim();
     loading.add(url);
     if (mounted) {
       setState(() {});
@@ -198,7 +199,6 @@ window.addEventListener('scroll', function() {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        addRSS(url);
         String xml = utf8.decode(response.bodyBytes);
         try {
           var rssFeed = RssFeed.parse(xml);
