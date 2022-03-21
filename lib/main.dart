@@ -62,10 +62,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
-      String script = "clearAll()";
-      var controller = await _controller.future;
-      await controller.runJavascript(script);
-      runtimeState = {};
+      // String script = "clearAll()";
+      // var controller = await _controller.future;
+      // await controller.runJavascript(script);
+      // runtimeState = {};
       loadRss();
     }
   }
